@@ -1,6 +1,10 @@
 // ignore_for_file: unnecessary_const
 
+import 'dart:convert';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 void main() {
   runApp(const MyApp());
@@ -88,10 +92,11 @@ class _MyHomePageState extends State<MyHomePage> {
 }
 
 class Game extends StatefulWidget {
-  const Game({Key? key, required this.title, required String username})
+  const Game({Key? key, required this.title, required this.username})
       : super(key: key);
 
   final String title;
+  final String username;
 
   @override
   State<Game> createState() => _GameState();
@@ -100,10 +105,55 @@ class Game extends StatefulWidget {
 class _GameState extends State<Game> {
   int _score = 0;
   final controller = TextEditingController();
+  List colorNames = [
+    "green",
+    "black",
+    "red",
+    "blue",
+  ];
+  List colors = [Colors.green, Colors.black, Colors.red, Colors.blue];
+
+  Random random = new Random();
+
+  int index = 0;
+
+  void changeIndex() {
+    setState(() => index = random.nextInt(colors.length));
+  }
+
   void _play() {
-    setState(() {
-      _score++;
-    });
+    if (controller.text.toLowerCase() == colorNames[index]) {
+      setState(() {
+        _score++;
+        score();
+      });
+    } else {
+      setState(() {
+        _score = 0;
+      });
+    }
+    changeIndex();
+    controller.text = "";
+  }
+
+  Future<void> score() async {
+    String user = widget.username;
+    var response = await http.post(
+      Uri.parse('https://7c2bad50.us-south.apigw.appdomain.cloud/api/placar'),
+      headers: <String, String>{
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: jsonEncode(<String, String>{
+        'usuario': user,
+      }),
+    );
+    if (response.statusCode == 200) {
+      // ignore: avoid_print
+      print(response.body);
+    } else {
+      throw Exception('Erro ao mandar ponto');
+    }
   }
 
   @override
@@ -116,16 +166,19 @@ class _GameState extends State<Game> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
+            Spacer(),
+            Text("Score: $_score"),
             Container(
               height: 150.0,
               width: 300.0,
               color: Colors.transparent,
-              child: Container(
-                decoration: const BoxDecoration(
-                    color: Colors.green,
-                    borderRadius: BorderRadius.all(Radius.circular(10.0))),
-              ),
+              child: Icon(Icons.stop_rounded,
+                  size: 300,
+                  color: colors[
+                      index] //Colors.primaries[Random().nextInt(Colors.primaries.length)],
+                  ),
             ),
+            Spacer(),
             Container(
               padding: const EdgeInsets.all(10),
               child: TextField(
@@ -149,7 +202,8 @@ class _GameState extends State<Game> {
                   ),
                 ),
               ),
-            )
+            ),
+            Spacer(),
           ],
         ),
       ),
